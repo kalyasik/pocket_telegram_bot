@@ -1,3 +1,6 @@
+# github.com/boltdb/bolt v1.3.1
+## explicit
+github.com/boltdb/bolt
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
 # github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
