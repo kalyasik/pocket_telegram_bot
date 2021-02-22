@@ -4,42 +4,52 @@ import (
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/zhashkevych/go-pocket-sdk"
 )
 
 type Bot struct {
-	bot *tgbotapi.BotAPI
+	bot          *tgbotapi.BotAPI
+	pocketClient *pocket.Client
+	redirectURL  string
 }
 
-func NewBot(bot *tgbotapi.BotAPI) *Bot {
-	return &Bot{bot: bot}
+func NewBot(bot *tgbotapi.BotAPI, pocketClient *pocket.Client, redirectURL string) *Bot {
+	return &Bot{bot: bot, pocketClient: pocketClient, redirectURL: redirectURL}
 }
 
 func (b *Bot) Start() error {
 	log.Printf("Authorized on account %s", b.bot.Self.UserName)
 
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
-	updates, err := b.bot.GetUpdatesChan(u)
+	updates, err := b.initUpdatesChannel()
 	if err != nil {
 		return err
 	}
 
+	b.handleUpdates(updates)
+	return nil
+}
+
+func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 	for update := range updates {
 		if update.Message == nil {
 			continue
 		}
 
-		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-		msg.ReplyToMessageID = update.Message.MessageID
-
-		_, err := b.bot.Send(msg)
-		if err != nil {
-			return err
+		if update.Message.IsCommand() {
+			err := b.handleCommand(update.Message)
+			if err != nil {
+				log.Fatal(err)
+			}
+			continue
 		}
-	}
 
-	return nil
+		b.handleMessage(update.Message)
+	}
+}
+
+func (b *Bot) initUpdatesChannel() (tgbotapi.UpdatesChannel, error) {
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+
+	return b.bot.GetUpdatesChan(u)
 }
